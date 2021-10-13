@@ -12,7 +12,7 @@ import csv
 import warnings
 
 def main():
-    epoch = 10
+    epoch = 100
     warnings.filterwarnings('ignore')
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     transform_train = transforms.Compose([
@@ -36,16 +36,28 @@ def main():
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.1)
     x = []
-    y = range(epoch)
+    y = []
+    x.append(0)
+    y.append(0)
+    data_save = []
     for epo in range(epoch):
         train_acc, train_loss = train(model, device, train_loader, criterion, optimizer)
         test_acc, test_loss = test(model, device, test_loader, criterion)
         stdout_temp = 'epoch: {:>3}, train acc: {:<8}, train loss: {:<8}, test acc: {:<8}, test loss: {:<8}'
-        print(stdout_temp.format(epoch+1, train_acc, train_loss, test_acc, test_loss))
+        print(stdout_temp.format(epo+1, train_acc, train_loss, test_acc, test_loss))
         print('')
-        x.append([epoch,test_acc])
+        data_save.append([epo,test_acc])
+        x.append(epo)
+        y.append(test_acc)
     
-    file1 = open('resnet18-cifat10.csv','w')
+    with open('resnet18-cifat10.csv','w') as file:
+        writer = csv.writer(file)
+        writer.writerows(data_save)
+    
+    plt.plot(x, y)
+    plt.savefig("sample.png")
+
+    
     
     
 
