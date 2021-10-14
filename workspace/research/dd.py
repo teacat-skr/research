@@ -11,8 +11,11 @@ import matplotlib.pyplot as plt
 import csv 
 import warnings
 
+global 
+
 def main():
-    epoch = 100
+    epochs = 100
+    grad_steps = 500000
     warnings.filterwarnings('ignore')
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     transform_train = transforms.Compose([
@@ -40,20 +43,61 @@ def main():
     x.append(0)
     y.append(0)
     data_save = []
-    for epo in range(epoch):
-        train_acc, train_loss = train(model, device, train_loader, criterion, optimizer)
-        test_acc, test_loss = test(model, device, test_loader, criterion)
+    # for epoch in range(epochs):
+    #     train_acc, train_loss = train(model, device, train_loader, criterion, optimizer)
+    #     test_acc, test_loss = test(model, device, test_loader, criterion)
+    #     stdout_temp = 'epoch: {:>3}, train acc: {:<8}, train loss: {:<8}, test acc: {:<8}, test loss: {:<8}'
+    #     print(stdout_temp.format(epoch+1, train_acc, train_loss, test_acc, test_loss))
+    #     print('')
+    #     data_save.append([epoch,test_acc])
+    #     x.append(epoch + 1)
+    #     y.append(test_acc)
+    step = 0
+    while (grad_steps != step):
+        output_list = []
+        target_list = []
+        running_loss = 0.0
+        for batich_idx, (inputs, targets) in enumerate(train_loader):
+            inputs, targets = inputs.to(device), targets.to(device)
+            outputs = model(inputs)
+            loss = criterion(outputs, targets)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            output_list += [int(o.argmax()) for o in outputs]
+            target_list += [int(t) for t in targets]
+            running_loss += loss.item()
+
+            train_acc, train_loss = calc_score(output_list, target_list, running_loss, train_loader)
+            if batich_idx % 10 == 0 and batich_idx != 0:
+                stdout_temp = 'gradient step: {:>3}/{:<3}, train acc:{:<8}, train loss: {:<8}'
+                print(stdout_temp.format(batich_idx, grad_steps, train_acc, train_loss))
+            step += 1
+            if step == grad_steps:
+
+        train_acc, train_loss = calc_score(output_list, target_list, running_loss, train_loader)
+            
+        test_acc, test_loss = calc_score(output_list, target_list, running_loss, test_loader)
         stdout_temp = 'epoch: {:>3}, train acc: {:<8}, train loss: {:<8}, test acc: {:<8}, test loss: {:<8}'
-        print(stdout_temp.format(epo+1, train_acc, train_loss, test_acc, test_loss))
+        print(stdout_temp.format(epoch+1, train_acc, train_loss, test_acc, test_loss))
         print('')
-        data_save.append([epo,test_acc])
-        x.append(epo)
+        data_save.append([epoch,test_acc])
+        x.append(grad_steps + 1)
         y.append(test_acc)
-    
+
+
+
     with open('resnet18-cifat10.csv','w') as file:
         writer = csv.writer(file)
         writer.writerows(data_save)
     
+    plt.title("ResNet18 trained by Cifar10")
+    plt.xlim(0, epochs * 1.2)
+    plt.ylim(0, 1)
+    plt.xlabel("Epochs")
+    plt.ylabel("Test Accuracy")
     plt.plot(x, y)
     plt.savefig("sample.png")
     #test
