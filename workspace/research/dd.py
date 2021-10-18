@@ -13,7 +13,6 @@ import warnings
 
 def main():
     epochs = 100
-    grad_steps = 500000
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     transform_train = transforms.Compose([
         transforms.RandomCrop(32, padding=4),
@@ -69,6 +68,7 @@ def main():
     plt.savefig("sample.png")
     
 def sub():
+    #step数指定
     grad_steps = 500000
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     transform_train = transforms.Compose([
