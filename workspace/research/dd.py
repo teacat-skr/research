@@ -7,6 +7,7 @@ import torchvision
 import torchvision.transforms as transforms;
 from sklearn.metrics import classification_report
 import math
+from model import resnet18k
 
 import matplotlib.pyplot as plt
 import csv 
@@ -70,7 +71,8 @@ def main():
     
 def sub():
     #step数指定
-    grad_steps = 500000
+    grad_steps = 50000
+    label_noise_rate = 0.1
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     transform_train = transforms.Compose([
         transforms.RandomCrop(32, padding=4),
@@ -87,7 +89,7 @@ def sub():
     test_set = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform_train)
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=128, shuffle=True, num_workers=2)
     class_names = ('plane', 'car', 'bird', 'cat', 'dog', 'frog', 'ship', 'truck')
-    model = torchvision.models.resnet18(pretrained=False)
+    model = resnet18k.make_resnet18k(k=64)
     model = model.to(device)
     
     criterion = nn.CrossEntropyLoss()
@@ -98,21 +100,25 @@ def sub():
         else:
             return 1.0 / math.sqrt(math.floor(steps / 512.0))
     scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda = func)
-    x = range(grad_steps + 1)
-    tracc = []
-    teacc = []
-    tracc.append(0)
-    teacc.append(0)
+    x1 = range(grad_steps + 1)
+    x2 = []
+    trerr = []
+    teerr = []
+    trerr.append(1)
+    teerr.append(1)
+    x2.append(0)
     data_save = []
-    model.train()
     count = 0
+    # for batich_idx, (inputs, targets) in enumerate(train_loader):
     while(grad_steps != count):
-        output_list = []
-        target_list = []
         running_loss = 0.0
+        model.train()
         for batich_idx, (inputs, targets) in enumerate(train_loader):
             if(grad_steps == count):
                 break
+
+            output_list = []
+            target_list = []
             inputs, targets = inputs.to(device), targets.to(device)
             outputs = model(inputs)
             loss = criterion(outputs, targets)
@@ -126,14 +132,17 @@ def sub():
             running_loss += loss.item()
 
             train_acc, train_loss = calc_score(output_list, target_list, running_loss, train_loader)
-            train_acc, train_loss = calc_score(outputs, targets, running_loss, train_loader)
             if count % 100 == 0 and count != 0:
                 stdout_temp = 'step: {:>3}/{:<3}, train acc:{:<8}, train loss: {:<8}'
                 print(stdout_temp.format(count, grad_steps, train_acc, train_loss))
-                print(optimizer.param_groups[0]['lr'])
-            tracc.append(train_acc)
+            trerr.append(1.0 - train_acc)
             count += 1
             scheduler.step()
+        test_acc, test_loss = test(model, device, test_loader, criterion)
+        stdout_temp = 'step: {:>3}/{:<3}, test acc:{:<8}, test loss: {:<8}'
+        print(stdout_temp.format(count, grad_steps, test_acc, test_loss))
+        teerr.append(1.0 - test_acc)
+        x2.append(count)
     
     # with open('resnet18-cifat10.csv','w') as file:
     #     writer = csv.writer(file)
@@ -143,8 +152,10 @@ def sub():
     plt.xlim(0, grad_steps * 1.2)
     plt.ylim(0, 1)
     plt.xlabel("Steps")
-    plt.ylabel("Accuracy")
-    plt.plot(x, tracc)
+    plt.ylabel("Erorr")
+    plt.plot(x1, trerr, label = 'train', linewidth=0.5)
+    plt.plot(x2, teerr, label = 'test')
+    plt.legend(loc='upper right')
     plt.savefig("sample1.png")
 
 
@@ -211,4 +222,7 @@ def calc_score(output_list, target_list, running_loss, data_loader):
 if __name__ =='__main__':
     warnings.filterwarnings('ignore')
     # main()
+    import time
+    # start = time.perf_counter()
     sub()
+    # print(time.perf_counter() - start)
