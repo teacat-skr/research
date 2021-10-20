@@ -6,6 +6,7 @@ import torch.backends.cudnn as cudnn
 import torchvision
 import torchvision.transforms as transforms;
 from sklearn.metrics import classification_report
+import math
 
 import matplotlib.pyplot as plt
 import csv 
@@ -91,7 +92,12 @@ def sub():
     
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.1)
-    count = 0
+    def func(steps):
+        if steps < 512:
+            return 1
+        else:
+            return 1.0 / math.sqrt(math.floor(steps / 512.0))
+    scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda = func)
     x = range(grad_steps + 1)
     tracc = []
     teacc = []
@@ -99,6 +105,7 @@ def sub():
     teacc.append(0)
     data_save = []
     model.train()
+    count = 0
     while(grad_steps != count):
         output_list = []
         target_list = []
@@ -119,11 +126,14 @@ def sub():
             running_loss += loss.item()
 
             train_acc, train_loss = calc_score(output_list, target_list, running_loss, train_loader)
+            train_acc, train_loss = calc_score(outputs, targets, running_loss, train_loader)
             if count % 100 == 0 and count != 0:
                 stdout_temp = 'step: {:>3}/{:<3}, train acc:{:<8}, train loss: {:<8}'
                 print(stdout_temp.format(count, grad_steps, train_acc, train_loss))
+                print(optimizer.param_groups[0]['lr'])
             tracc.append(train_acc)
             count += 1
+            scheduler.step()
     
     # with open('resnet18-cifat10.csv','w') as file:
     #     writer = csv.writer(file)

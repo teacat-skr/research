@@ -12,7 +12,8 @@ import csv
 import warnings
 
 def main():
-    epoch = 100
+    epochs = 100
+    grad_steps = 500000
     warnings.filterwarnings('ignore')
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     transform_train = transforms.Compose([
@@ -40,23 +41,28 @@ def main():
     x.append(0)
     y.append(0)
     data_save = []
-    for epo in range(epoch):
+    for epoch in range(epochs):
         train_acc, train_loss = train(model, device, train_loader, criterion, optimizer)
         test_acc, test_loss = test(model, device, test_loader, criterion)
         stdout_temp = 'epoch: {:>3}, train acc: {:<8}, train loss: {:<8}, test acc: {:<8}, test loss: {:<8}'
-        print(stdout_temp.format(epo+1, train_acc, train_loss, test_acc, test_loss))
+        print(stdout_temp.format(epoch+1, train_acc, train_loss, test_acc, test_loss))
         print('')
-        data_save.append([epo,test_acc])
-        x.append(epo)
-        y.append(test_acc)
+        data_save.append([epoch,test_acc])
+        x.append(epoch + 1)
+        y.append(train_acc)
     
     with open('resnet18-cifat10.csv','w') as file:
         writer = csv.writer(file)
         writer.writerows(data_save)
     
+    plt.title("ResNet18 trained by Cifar10")
+    plt.xlim(0, epochs * 1.2)
+    plt.ylim(0, 1)
+    plt.xlabel("Epochs")
+    plt.ylabel("Test Accuracy")
     plt.plot(x, y)
     plt.savefig("sample.png")
-
+    #test
     
     
     
