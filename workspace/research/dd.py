@@ -14,64 +14,8 @@ import random
 import matplotlib.pyplot as plt
 import csv 
 import warnings
-
+    
 def main():
-    epochs = 100
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    transform_train = transforms.Compose([
-        transforms.RandomCrop(32, padding=4),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-    ])
-    transform_test = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-    ])
-    train_set = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_train)
-    train_loader = torch.utils.data.DataLoader(train_set, batch_size=128, shuffle=True, num_workers=2)
-    test_set = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform_train)
-    test_loader = torch.utils.data.DataLoader(test_set, batch_size=128, shuffle=True, num_workers=2)
-    class_names = ('plane', 'car', 'bird', 'cat', 'dog', 'frog', 'ship', 'truck')
-    model = torchvision.models.resnet18(pretrained=False)
-    model = model.to(device)
-
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.1)
-    x = []
-    tracc = []
-    teacc = []
-    x.append(0)
-    tracc.append(0)
-    teacc.append(0)
-    data_save = []
-    for epoch in range(epochs):
-        train_acc, train_loss = train(model, device, train_loader, criterion, optimizer)
-        test_acc, test_loss = test(model, device, test_loader, criterion)
-        stdout_temp = 'epoch: {:>3}, train acc: {:<8}, train loss: {:<8}, test acc: {:<8}, test loss: {:<8}'
-        print(stdout_temp.format(epoch+1, train_acc, train_loss, test_acc, test_loss))
-        print('')
-        data_save.append([epoch,test_acc])
-        x.append(epoch + 1)
-        tracc.append(train_acc)
-        teacc.append(test_acc)
-
-    
-    with open('resnet18-cifat10.csv','w') as file:
-        writer = csv.writer(file)
-        writer.writerows(data_save)
-    
-    plt.title("ResNet18 trained by Cifar10")
-    plt.xlim(0, epochs * 1.2)
-    plt.ylim(0, 1)
-    plt.xlabel("Epochs")
-    plt.ylabel("Accuracy")
-    plt.plot(x, tracc, label = 'train')
-    plt.plot(x, teacc, label = 'test')
-    plt.legend(loc='upper right')
-    plt.savefig("sample.png")
-    
-def sub():
     args = parse_args()
     #step数指定
     grad_steps = args.grad_steps
@@ -101,7 +45,7 @@ def sub():
     model = resnet18k.make_resnet18k(k=args.model_width)
     model = model.to(device)
     
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
     optimizer = optim.SGD(model.parameters(), lr=0.1)
     def func(steps):
         if steps < 512:
@@ -151,11 +95,11 @@ def sub():
         teerr.append(1.0 - test_acc)
         x2.append(count)
     
-    # with open('resnet18-cifat10.csv','w') as file:
+    # with open('resnet18*' + str(args.model_width) + '-cifat10.csv','w') as file:
     #     writer = csv.writer(file)
     #     writer.writerows(data_save)
     
-    plt.title("ResNet18 trained by Cifar10")
+    plt.title("ResNet18*" + str(args.model_width) + " trained by Cifar10")
     plt.xlim(0, grad_steps * 1.2)
     plt.ylim(0, 1)
     plt.xlabel("Steps")
@@ -163,7 +107,7 @@ def sub():
     plt.plot(x1, trerr, label = 'train', linewidth=0.5)
     plt.plot(x2, teerr, label = 'test')
     plt.legend(loc='upper right')
-    plt.savefig("sample1.png")
+    plt.savefig("./output/ResNet18*" + str(args.model_width) + "TrainedByCifar10.png")
 
 
     
@@ -236,8 +180,7 @@ def parse_args():
 
 if __name__ =='__main__':
     warnings.filterwarnings('ignore')
-    # main()
     import time
     start = time.perf_counter()
-    sub()
+    main()
     print(time.perf_counter() - start)
