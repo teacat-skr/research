@@ -57,10 +57,25 @@ def main():
     x2 = []
     trerr = []
     teerr = []
-    trerr.append(1)
-    teerr.append(1)
+    trloss = []
+    teloss = []
     x2.append(0)
-    data_save = []
+    train_data_save = []
+    train_data_save.append(["step", "error", "loss"])
+    train_acc, train_loss = test(model, device, test_loader, criterion)
+    #test()を使ってtrainデータのerrorとlossの初期値を取得
+    train_data_save.append([0, 1.0 - train_acc, train_loss])
+    trerr.append(1.0 - train_acc)
+    trloss.append(train_loss)
+
+    test_data_save = []
+    test_data_save.append(["step", "error", "loss"])
+    test_acc, test_loss = test(model, device, test_loader, criterion)
+    #test()を使ってtestデータのerrorとlossの初期値を取得
+    test_data_save.append([0, 1.0 - test_acc, test_loss])
+    teerr.append(1.0 - test_acc)
+    teloss.append(test_loss)
+
     count = 0
     while(grad_steps != count):
         running_loss = 0.0
@@ -83,31 +98,53 @@ def main():
             running_loss += loss.item()
 
             train_acc, train_loss = calc_score(output_list, target_list, running_loss, train_loader)
-            if count % 100 == 0 and count != 0:
+            if count % 1000 == 0 and count != 0:
                 stdout_temp = 'step: {:>3}/{:<3}, train acc:{:<8}, train loss: {:<8}'
                 print(stdout_temp.format(count, grad_steps, train_acc, train_loss))
             trerr.append(1.0 - train_acc)
+            trloss.append(loss.item())
             count += 1
             scheduler.step()
+            train_data_save.append([count, 1.0 - train_acc, train_loss])
         test_acc, test_loss = test(model, device, test_loader, criterion)
         stdout_temp = 'step: {:>3}/{:<3}, test acc:{:<8}, test loss: {:<8}'
         print(stdout_temp.format(count, grad_steps, test_acc, test_loss))
         teerr.append(1.0 - test_acc)
+        teloss.append(test_loss)
+        test_data_save.append([count, 1.0 - train_acc, train_loss])
         x2.append(count)
     
-    # with open('resnet18*' + str(args.model_width) + '-cifat10.csv','w') as file:
-    #     writer = csv.writer(file)
-    #     writer.writerows(data_save)
+    with open('./csv/resnet18*' + str(args.model_width) + '-cifar10-train.csv','w') as file:
+        writer = csv.writer(file)
+        writer.writerows(train_data_save)
+
+    with open('./csv/resnet18*' + str(args.model_width) + '-cifar10-test.csv','w') as file:
+        writer = csv.writer(file)
+        writer.writerows(test_data_save)
     
+    #errorのグラフ化
     plt.title("ResNet18*" + str(args.model_width) + " trained by Cifar10")
     plt.xlim(0, grad_steps * 1.2)
     plt.ylim(0, 1)
     plt.xlabel("Steps")
     plt.ylabel("Erorr")
     plt.plot(x1, trerr, label = 'train', linewidth=0.5)
-    plt.plot(x2, teerr, label = 'test')
+    plt.plot(x2, teerr, marker='.', label='test')
     plt.legend(loc='upper right')
     plt.savefig("./output/ResNet18*" + str(args.model_width) + "TrainedByCifar10.png")
+
+    plt.close()
+
+    #lossのグラフ化
+    plt.title("ResNet18*" + str(args.model_width) + " trained by Cifar10")
+    plt.xlim(0, grad_steps * 1.2)
+    plt.ylim(0, max(max(trloss) * 1.2, max(teloss) * 1.2))
+    plt.xlabel("Steps")
+    plt.ylabel("Loss")
+    plt.plot(x1, trloss, label = 'train', linewidth=0.5)
+    plt.plot(x2, teloss, marker='.', label='test')
+    plt.legend(loc='upper right')
+    plt.savefig("./output/loss-ResNet18*" + str(args.model_width) + "TrainedByCifar10.png")
 
 
     
@@ -165,7 +202,7 @@ def calc_score(output_list, target_list, running_loss, data_loader):
     result = classification_report(output_list, target_list, output_dict=True)
     acc = round(result['accuracy'], 6)
     table = classification_report(output_list, target_list)
-    loss = round(running_loss / len(data_loader.dataset), 6)
+    loss = round(running_loss / len(data_loader), 6)
 
     return acc, loss
 
