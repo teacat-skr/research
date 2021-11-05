@@ -7,7 +7,7 @@ import torchvision
 import torchvision.transforms as transforms;
 from sklearn.metrics import classification_report
 import math
-from model import resnet18k
+import torchvision.models as models
 
 import argparse
 import random
@@ -146,6 +146,112 @@ def main():
     plt.legend(loc='upper right')
     plt.savefig("./output/loss-ResNet18*" + str(args.model_width) + "TrainedByCifar10.png")
 
+def sub():
+    args = parse_args()
+    #epoch数指定
+    epoch = args.grad_steps
+    label_noise_rate = args.label_noise_rate
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    transform_train = transforms.Compose([
+        transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+    transform_test = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+    train_set = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_train)
+    #インスタンス変数にアクセスしてラベルの張替え
+    # import numpy as np
+    # sample = train_set[0][0]
+    # img = np.transpose(sample, (1, 2, 0))
+    # plt.imshow(img)
+    # plt.savefig("")
+    # return 0
+    for i in range(len(train_set.targets)):
+        if(random.randint(0, 9999) < int(label_noise_rate * 10000)):
+            train_set.targets[i] += random.randint(1, 9)
+            train_set.targets[i] %= 10
+    
+    train_loader = torch.utils.data.DataLoader(train_set, batch_size=128, shuffle=True, num_workers=2)
+    test_set = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform_train)
+    test_loader = torch.utils.data.DataLoader(test_set, batch_size=128, shuffle=True, num_workers=2)
+    class_names = ('plane', 'car', 'bird', 'cat', 'dog', 'frog', 'ship', 'truck')
+    model = models.resnet18()
+    model = model.to(device)
+    
+    criterion = nn.CrossEntropyLoss().to(device)
+    optimizer = optim.Adam(model.parameters(), lr=0.0001)
+    x = range(epoch + 1)
+    trerr = []
+    teerr = []
+    trloss = []
+    teloss = []
+    train_data_save = []
+    train_data_save.append(["epoch", "error", "loss"])
+    train_acc, train_loss = test(model, device, test_loader, criterion)
+    #test()を使ってtrainデータのerrorとlossの初期値を取得
+    train_data_save.append([0, 1.0 - train_acc, train_loss])
+    trerr.append(1.0 - train_acc)
+    trloss.append(train_loss)
+
+    test_data_save = []
+    test_data_save.append(["epoch", "error", "loss"])
+    test_acc, test_loss = test(model, device, test_loader, criterion)
+    #test()を使ってtestデータのerrorとlossの初期値を取得
+    test_data_save.append([0, 1.0 - test_acc, test_loss])
+    teerr.append(1.0 - test_acc)
+    teloss.append(test_loss)
+
+    for epoch in range(epoch):
+        # Train and test a model.
+        train_acc, train_loss = train(model, device, train_loader, criterion, optimizer)
+        test_acc, test_loss = test(model, device, test_loader, criterion)
+
+        trerr.append(1.0 - train_acc)
+        trloss.append(train_loss)
+        train_data_save.append([epoch + 1, 1.0 - train_acc, train_loss])
+
+        teerr.append(1.0 - test_acc)
+        teloss.append(test_loss)
+        test_data_save.append([epoch + 1, 1.0 - test_acc, test_loss])
+        # Output score.
+        stdout_temp = 'epoch: {:>3}, train acc: {:<8}, train loss: {:<8}, test acc: {:<8}, test loss: {:<8}'
+        print(stdout_temp.format(epoch+1, train_acc, train_loss, test_acc, test_loss))
+    
+    with open('./csv/resnet18*' + str(args.model_width) + '-cifar10-train.csv','w') as file:
+        writer = csv.writer(file)
+        writer.writerows(train_data_save)
+
+    with open('./csv/resnet18*' + str(args.model_width) + '-cifar10-test.csv','w') as file:
+        writer = csv.writer(file)
+        writer.writerows(test_data_save)
+    
+    #errorのグラフ化
+    plt.title("ResNet18*" + str(args.model_width) + " trained by Cifar10")
+    plt.xlim(0, epoch * 1.2)
+    plt.ylim(0, 1)
+    plt.xlabel("Epoch")
+    plt.ylabel("Erorr")
+    plt.plot(x, trerr, label='train')
+    plt.plot(x, teerr, label='test')
+    plt.legend(loc='upper right')
+    plt.savefig("./output/ResNet18*" + str(args.model_width) + "TrainedByCifar10.png")
+
+    plt.close()
+
+    #lossのグラフ化
+    plt.title("ResNet18*" + str(args.model_width) + " trained by Cifar10")
+    plt.xlim(0, epoch * 1.2)
+    plt.ylim(0, max(max(trloss) * 1.2, max(teloss) * 1.2))
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.plot(x, trloss, label='train')
+    plt.plot(x, teloss, label='test')
+    plt.legend(loc='upper right')
+    plt.savefig("./output/loss-ResNet18*" + str(args.model_width) + "TrainedByCifar10.png")
 
     
 
@@ -168,7 +274,7 @@ def train (model, device, train_loader, criterion, optimizer):
         running_loss += loss.item()
 
         train_acc, train_loss = calc_score(output_list, target_list, running_loss, train_loader)
-        if batich_idx % 10 == 0 and batich_idx != 0:
+        if batich_idx % 100 == 0 and batich_idx != 0:
             stdout_temp = 'batch: {:>3}/{:<3}, train acc:{:<8}, train loss: {:<8}'
             print(stdout_temp.format(batich_idx, len(train_loader), train_acc, train_loss))
     train_acc, train_loss = calc_score(output_list, target_list, running_loss, train_loader)
@@ -201,7 +307,6 @@ def calc_score(output_list, target_list, running_loss, data_loader):
     # import pdb;pdb.set_trace()
     result = classification_report(output_list, target_list, output_dict=True)
     acc = round(result['accuracy'], 6)
-    table = classification_report(output_list, target_list)
     loss = round(running_loss / len(data_loader), 6)
 
     return acc, loss
@@ -211,7 +316,7 @@ def parse_args():
     
     arg_parser.add_argument("-k", "--model_width", nargs="?", type=int, default=1)
     arg_parser.add_argument("grad_steps", nargs="?", type=int, default=50000)
-    arg_parser.add_argument("label_noise_rate", nargs="?", type=float, default=0)
+    arg_parser.add_argument("label_noise_rate", nargs="?", type=float, default=0.0)
 
     return arg_parser.parse_args()
 
@@ -219,5 +324,5 @@ if __name__ =='__main__':
     warnings.filterwarnings('ignore')
     import time
     start = time.perf_counter()
-    main()
+    sub()
     print(time.perf_counter() - start)
