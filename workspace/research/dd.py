@@ -7,7 +7,7 @@ import torchvision
 import torchvision.transforms as transforms;
 from sklearn.metrics import classification_report
 import math
-import torchvision.models as models
+from model import resnet18k 
 
 import argparse
 import random
@@ -179,17 +179,20 @@ def sub():
     test_set = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform_train)
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=128, shuffle=True, num_workers=2)
     class_names = ('plane', 'car', 'bird', 'cat', 'dog', 'frog', 'ship', 'truck')
-    model = models.resnet18()
+    model = resnet18k.make_resnet18k(k=args.model_width)
     model = model.to(device)
     
     criterion = nn.CrossEntropyLoss().to(device)
     optimizer = optim.Adam(model.parameters(), lr=0.0001)
-    x = range(epoch + 1)
+    x1 = []
+    x2 = range(epoch + 1)
     trerr = []
     teerr = []
     trloss = []
     teloss = []
     train_data_save = []
+
+    x1.append(0)
     train_data_save.append(["epoch", "error", "loss"])
     train_acc, train_loss = test(model, device, test_loader, criterion)
     #test()を使ってtrainデータのerrorとlossの初期値を取得
@@ -207,19 +210,43 @@ def sub():
 
     for epoch in range(epoch):
         # Train and test a model.
-        train_acc, train_loss = train(model, device, train_loader, criterion, optimizer)
-        test_acc, test_loss = test(model, device, test_loader, criterion)
+        model.train()
+        #trainの各数値はbatchごとに出す
+        #calc_scoreの返却値のlossはbatch数で割っているので無視,loss.item()を用いる
+        for batich_idx, (inputs, targets) in enumerate(train_loader):
+            output_list = []
+            target_list = []
+            running_loss = 0.0
+            xpoint = 0.0 + epoch + (float(batich_idx + 1) / len(train_loader))
+            inputs, targets = inputs.to(device), targets.to(device)
+            outputs = model(inputs)
+            loss = criterion(outputs, targets)
 
-        trerr.append(1.0 - train_acc)
-        trloss.append(train_loss)
-        train_data_save.append([epoch + 1, 1.0 - train_acc, train_loss])
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            output_list += [int(o.argmax()) for o in outputs]
+            target_list += [int(t) for t in targets]
+            running_loss += loss.item()
+
+            train_acc, train_loss = calc_score(output_list, target_list, running_loss, train_loader)
+            x1.append(xpoint)
+            trerr.append(1.0 - train_acc)
+            trloss.append(loss.item())
+            train_data_save.append([xpoint, 1.0 - train_acc, loss.item()])
+            # if batich_idx % 100 == 0 and batich_idx != 0:
+            #     stdout_temp = 'batch: {:>3}/{:<3}, train acc:{:<8}, train loss: {:<8}'
+            #     print(stdout_temp.format(batich_idx, len(train_loader), train_acc, loss.item()))
+            
+        test_acc, test_loss = test(model, device, test_loader, criterion)
 
         teerr.append(1.0 - test_acc)
         teloss.append(test_loss)
         test_data_save.append([epoch + 1, 1.0 - test_acc, test_loss])
         # Output score.
         stdout_temp = 'epoch: {:>3}, train acc: {:<8}, train loss: {:<8}, test acc: {:<8}, test loss: {:<8}'
-        print(stdout_temp.format(epoch+1, train_acc, train_loss, test_acc, test_loss))
+        print(stdout_temp.format(epoch+1, train_acc, loss.item(), test_acc, test_loss))
     
     with open('./csv/resnet18*' + str(args.model_width) + '-cifar10-train.csv','w') as file:
         writer = csv.writer(file)
@@ -235,8 +262,8 @@ def sub():
     plt.ylim(0, 1)
     plt.xlabel("Epoch")
     plt.ylabel("Erorr")
-    plt.plot(x, trerr, label='train')
-    plt.plot(x, teerr, label='test')
+    plt.plot(x1, trerr, label='train', linewidth=0.5)
+    plt.plot(x2, teerr, label='test')
     plt.legend(loc='upper right')
     plt.savefig("./output/ResNet18*" + str(args.model_width) + "TrainedByCifar10.png")
 
@@ -248,8 +275,8 @@ def sub():
     plt.ylim(0, max(max(trloss) * 1.2, max(teloss) * 1.2))
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    plt.plot(x, trloss, label='train')
-    plt.plot(x, teloss, label='test')
+    plt.plot(x1, trloss, label='train', linewidth=0.5)
+    plt.plot(x2, teloss, label='test')
     plt.legend(loc='upper right')
     plt.savefig("./output/loss-ResNet18*" + str(args.model_width) + "TrainedByCifar10.png")
 
