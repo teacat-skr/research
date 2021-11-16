@@ -6,6 +6,7 @@ import torch.backends.cudnn as cudnn
 import torchvision
 import torchvision.transforms as transforms;
 from sklearn.metrics import classification_report
+from sklearn.metrics import accuracy_score
 import math
 from model import resnet18k 
 
@@ -97,7 +98,7 @@ def main():
             target_list += [int(t) for t in targets]
             running_loss += loss.item()
 
-            train_acc, train_loss = calc_score(output_list, target_list, running_loss, train_loader)
+            train_acc, train_loss = calc_score(target_list, output_list, running_loss, train_loader)
             if count % 1000 == 0 and count != 0:
                 stdout_temp = 'step: {:>3}/{:<3}, train acc:{:<8}, train loss: {:<8}'
                 print(stdout_temp.format(count, grad_steps, train_acc, train_loss))
@@ -230,7 +231,7 @@ def sub():
             target_list += [int(t) for t in targets]
             running_loss += loss.item()
 
-            train_acc, train_loss = calc_score(output_list, target_list, running_loss, train_loader)
+            train_acc, train_loss = calc_score(target_list, output_list, running_loss, train_loader)
             x1.append(xpoint)
             trerr.append(1.0 - train_acc)
             trloss.append(loss.item())
@@ -300,11 +301,11 @@ def train (model, device, train_loader, criterion, optimizer):
         target_list += [int(t) for t in targets]
         running_loss += loss.item()
 
-        train_acc, train_loss = calc_score(output_list, target_list, running_loss, train_loader)
+        train_acc, train_loss = calc_score(target_list, output_list, running_loss, train_loader)
         if batich_idx % 100 == 0 and batich_idx != 0:
             stdout_temp = 'batch: {:>3}/{:<3}, train acc:{:<8}, train loss: {:<8}'
             print(stdout_temp.format(batich_idx, len(train_loader), train_acc, train_loss))
-    train_acc, train_loss = calc_score(output_list, target_list, running_loss, train_loader)
+    train_acc, train_loss = calc_score(target_list, output_list, running_loss, train_loader)
 
 
     return train_acc, train_loss
@@ -327,13 +328,14 @@ def test(model, device, test_loader, criterion):
 			target_list += [int(t) for t in targets]
 			running_loss += loss.item()
 		
-	test_acc, test_loss = calc_score(output_list, target_list, running_loss, test_loader)
+	test_acc, test_loss = calc_score(target_list, output_list, running_loss, test_loader)
 
 	return test_acc, test_loss
-def calc_score(output_list, target_list, running_loss, data_loader):
+def calc_score(true_list, predict_list, running_loss, data_loader):
     # import pdb;pdb.set_trace()
-    result = classification_report(output_list, target_list, output_dict=True)
-    acc = round(result['accuracy'], 6)
+    # result = classification_report(true_list, predict_list, output_dict=True)
+    # acc = round(result['accuracy'], 6)
+    acc = accuracy_score(true_list, predict_list)
     loss = round(running_loss / len(data_loader), 6)
 
     return acc, loss
