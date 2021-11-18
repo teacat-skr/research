@@ -249,6 +249,8 @@ def sub():
         stdout_temp = 'epoch: {:>3}, train acc: {:<8}, train loss: {:<8}, test acc: {:<8}, test loss: {:<8}'
         print(stdout_temp.format(epoch+1, train_acc, loss.item(), test_acc, test_loss))
     
+    torch.save(model.state_dict(), './model_weight/resnet18*' + str(args.model_width) + '-cifar10-train.csv')
+
     with open('./csv/resnet18*' + str(args.model_width) + '-cifar10-train.csv','w') as file:
         writer = csv.writer(file)
         writer.writerows(train_data_save)
