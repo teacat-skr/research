@@ -1,4 +1,4 @@
-workspace/research/data/
-docker-compose.yml
-README.md
-Docker
+workspace/research/csv/*
+workspace/research/data/*
+workspace/research/model_weight/*
+workspace/research/output/*
