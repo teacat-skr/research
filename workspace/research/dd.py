@@ -115,16 +115,16 @@ def main():
         test_data_save.append([count, 1.0 - train_acc, train_loss])
         x2.append(count)
     
-    with open('./csv/resnet18*' + str(args.model_width) + '-cifar10-train.csv','w') as file:
+    with open('./csv/resnet18_' + str(args.model_width) + '-cifar10-train.csv','w') as file:
         writer = csv.writer(file)
         writer.writerows(train_data_save)
 
-    with open('./csv/resnet18*' + str(args.model_width) + '-cifar10-test.csv','w') as file:
+    with open('./csv/resnet18_' + str(args.model_width) + '-cifar10-test.csv','w') as file:
         writer = csv.writer(file)
         writer.writerows(test_data_save)
     
     #errorのグラフ化
-    plt.title("ResNet18*" + str(args.model_width) + " trained by Cifar10")
+    plt.title("ResNet18_" + str(args.model_width) + " trained by Cifar10")
     plt.xlim(0, grad_steps * 1.2)
     plt.ylim(0, 1)
     plt.xlabel("Steps")
@@ -132,12 +132,12 @@ def main():
     plt.plot(x1, trerr, label = 'train', linewidth=0.5)
     plt.plot(x2, teerr, marker='.', label='test')
     plt.legend(loc='upper right')
-    plt.savefig("./output/ResNet18*" + str(args.model_width) + "TrainedByCifar10.png")
+    plt.savefig("./output/ResNet18_" + str(args.model_width) + "TrainedByCifar10.png")
 
     plt.close()
 
     #lossのグラフ化
-    plt.title("ResNet18*" + str(args.model_width) + " trained by Cifar10")
+    plt.title("ResNet18_" + str(args.model_width) + " trained by Cifar10")
     plt.xlim(0, grad_steps * 1.2)
     plt.ylim(0, max(max(trloss) * 1.2, max(teloss) * 1.2))
     plt.xlabel("Steps")
@@ -145,7 +145,7 @@ def main():
     plt.plot(x1, trloss, label = 'train', linewidth=0.5)
     plt.plot(x2, teloss, marker='.', label='test')
     plt.legend(loc='upper right')
-    plt.savefig("./output/loss-ResNet18*" + str(args.model_width) + "TrainedByCifar10.png")
+    plt.savefig("./output/loss-ResNet18_" + str(args.model_width) + "TrainedByCifar10.png")
 
 def sub():
     args = parse_args()
@@ -165,12 +165,6 @@ def sub():
     ])
     train_set = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_train)
     #インスタンス変数にアクセスしてラベルの張替え
-    # import numpy as np
-    # sample = train_set[0][0]
-    # img = np.transpose(sample, (1, 2, 0))
-    # plt.imshow(img)
-    # plt.savefig("")
-    # return 0
     for i in range(len(train_set.targets)):
         if(random.randint(0, 9999) < int(label_noise_rate * 10000)):
             train_set.targets[i] += random.randint(1, 9)
@@ -249,18 +243,18 @@ def sub():
         stdout_temp = 'epoch: {:>3}, train acc: {:<8}, train loss: {:<8}, test acc: {:<8}, test loss: {:<8}'
         print(stdout_temp.format(epoch+1, train_acc, loss.item(), test_acc, test_loss))
     
-    torch.save(model.state_dict(), './model_weight/resnet18*' + str(args.model_width) + '-cifar10-train.csv')
+    torch.save(model.state_dict(), './model_weight/resnet18_' + str(args.model_width) + '-cifar10-train.csv')
 
-    with open('./csv/resnet18*' + str(args.model_width) + '-cifar10-train.csv','w') as file:
+    with open('./csv/resnet18_' + str(args.model_width) + '-cifar10-train.csv','w') as file:
         writer = csv.writer(file)
         writer.writerows(train_data_save)
 
-    with open('./csv/resnet18*' + str(args.model_width) + '-cifar10-test.csv','w') as file:
+    with open('./csv/resnet18_' + str(args.model_width) + '-cifar10-test.csv','w') as file:
         writer = csv.writer(file)
         writer.writerows(test_data_save)
     
     #errorのグラフ化
-    plt.title("ResNet18*" + str(args.model_width) + " trained by Cifar10")
+    plt.title("ResNet18_" + str(args.model_width) + " trained by Cifar10")
     plt.xlim(0, epoch * 1.2)
     plt.ylim(0, 1)
     plt.xlabel("Epoch")
@@ -268,12 +262,12 @@ def sub():
     plt.plot(x1, trerr, label='train', linewidth=0.5)
     plt.plot(x2, teerr, label='test')
     plt.legend(loc='upper right')
-    plt.savefig("./output/ResNet18*" + str(args.model_width) + "TrainedByCifar10.png")
+    plt.savefig("./output/ResNet18_" + str(args.model_width) + "TrainedByCifar10.png")
 
     plt.close()
 
     #lossのグラフ化
-    plt.title("ResNet18*" + str(args.model_width) + " trained by Cifar10")
+    plt.title("ResNet18_" + str(args.model_width) + " trained by Cifar10")
     plt.xlim(0, epoch * 1.2)
     plt.ylim(0, max(max(trloss) * 1.2, max(teloss) * 1.2))
     plt.xlabel("Epoch")
@@ -281,7 +275,7 @@ def sub():
     plt.plot(x1, trloss, label='train', linewidth=0.5)
     plt.plot(x2, teloss, label='test')
     plt.legend(loc='upper right')
-    plt.savefig("./output/loss-ResNet18*" + str(args.model_width) + "TrainedByCifar10.png")
+    plt.savefig("./output/loss-ResNet18_" + str(args.model_width) + "TrainedByCifar10.png")
 
     
 
