@@ -14,7 +14,7 @@ for i in range(64):
         y.append(1.0 - (1.0 - err) * (1.0 - 0.15) + err * 0.15 / 9.0)
         # y2.append(err)
 
-plt.title("Double Descent")
+plt.title("Model-wise Double Descent")
 plt.xlim(0, 65)
 plt.ylim(0.0, max(y))
 plt.xlabel("ResNet18 width parameter")
